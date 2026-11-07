@@ -21,12 +21,19 @@ BOARDS = {
 # Dosya sistemini okutmaya yarayan include'ları engelle (mutlak yol, .., sürücü harfi, ters eğik çizgi)
 BAD_INC = re.compile(r'#\s*include(?:_next)?\s*[<"]\s*(?:/|[^>"\n]*\.\.|[^>"\n]*\\|[A-Za-z]:)')
 hits = {}
+GLOBAL = int(os.environ.get("GLOBAL_PER_MIN", "40"))
+global_hits = []
 lock = threading.Lock()
 
 
 def rate_ok(ip):
     now = time.time()
     with lock:
+        global global_hits
+        global_hits = [t for t in global_hits if now - t < 60]
+        if len(global_hits) >= GLOBAL:   # IP başlığı taklit edilse bile toplam istek sınırı
+            return False
+        global_hits.append(now)
         l = [t for t in hits.get(ip, []) if now - t < 60]
         if len(l) >= RATE:
             hits[ip] = l
